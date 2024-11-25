@@ -4,7 +4,10 @@ import { SliderInput, SliderInputProps } from '@alfalab/core-components/slider-i
 import { Typography } from '@alfalab/core-components/typography';
 import { useState } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
+import { LS, LSKeys } from './ls';
 import { appSt } from './style.css';
+import { ThxLayout } from './thx/ThxLayout';
+import { sendDataToGA } from './utils/events';
 
 const min = 10_000;
 const max = 95_000;
@@ -55,6 +58,7 @@ const calculatePayment = (principal: number, interestRate: number, term: number)
 
 export const App = () => {
   const [selectedPeriod, setPeriod] = useState(12);
+  const [loading, setLoading] = useState(false);
   const [value, setValue] = useState<number | string>(10_000);
 
   const handleInputChange: SliderInputProps['onInputChange'] = (_, { value }) => {
@@ -69,6 +73,21 @@ export const App = () => {
   const handleBlur = () => {
     setValue(Math.max(min, Math.min(max, numberValue)));
   };
+
+  const submit = () => {
+    setLoading(true);
+    sendDataToGA({
+      period: selectedPeriod === 12 ? '1_year' : selectedPeriod === 1 ? '1_month' : `${selectedPeriod}_months`,
+      sum: numberValue,
+    }).then(() => {
+      LS.setItem(LSKeys.ShowThx, true);
+      setLoading(false);
+    });
+  };
+
+  if (LS.getItem(LSKeys.ShowThx, false)) {
+    return <ThxLayout />;
+  }
 
   return (
     <>
@@ -118,7 +137,7 @@ export const App = () => {
       <Gap size={96} />
 
       <div className={appSt.bottomBtn}>
-        <ButtonMobile block view="primary">
+        <ButtonMobile loading={loading} block view="primary" onClick={submit}>
           Получить деньги
         </ButtonMobile>
       </div>
